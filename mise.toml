@@ -1,0 +1,65 @@
+[tools]
+"core:node" = "22.23.4"
+"core:pnpm" = "12.14.0"
+
+# ---------------------------------------------------------------------------
+# App Build & Packaging Tasks
+# ---------------------------------------------------------------------------
+
+[tasks."app:install"]
+description = "Install Electron workspace dependencies"
+dir = "apps/x"
+run = "pnpm install"
+
+[tasks."app:build"]
+description = "Build workspace packages (protocol, shared, core, preload, renderer, main)"
+dir = "apps/x"
+run = """
+pnpm run deps
+pnpm --filter @x/renderer run build
+pnpm --filter rowboat run build
+"""
+
+[tasks."app:package-linux"]
+description = "Package Linux unpacked Electron directory"
+dir = "apps/x/apps/main"
+run = "npx electron-forge package --platform linux --arch x64"
+
+[tasks."flatpak:build"]
+description = "Build Flatpak using flatpak-builder and export to local ostree repo"
+run = """
+mkdir -p build-repo build-dir
+flatpak-builder --force-clean --repo=build-repo --install-deps-from=flathub build-dir packaging/flatpak/net.whiteblossom.Rowboat.yaml
+"""
+
+[tasks."flatpak:bundle-file"]
+description = "Export ostree repo commit to standalone single-file .flatpak bundle"
+depends = ["flatpak:build"]
+run = """
+VERSION="${VERSION:-$(node -p "require('./apps/x/apps/main/package.json').version")}"
+flatpak build-bundle build-repo "Rowboat-${VERSION}-x64.flatpak" net.whiteblossom.Rowboat
+"""
+
+[tasks."flatpak:bundle-oci"]
+description = "Export ostree repo commit to OCI container bundle"
+depends = ["flatpak:build"]
+run = """
+rm -rf build-oci && mkdir -p build-oci
+flatpak build-bundle --oci build-repo build-oci net.whiteblossom.Rowboat
+"""
+
+[tasks."flatpak:push"]
+description = "Publish OCI bundle to Forgejo container registry"
+depends = ["flatpak:bundle-oci"]
+run = """
+TAG="${TAG:-latest}"
+REGISTRY="${REGISTRY:-code-dev.whiteblossom.net/whiteblossom/rowboat}"
+skopeo copy \
+  --dest-creds "${REGISTRY_USERNAME}:${REGISTRY_TOKEN}" \
+  oci:build-oci \
+  "docker://${REGISTRY}:${TAG}"
+"""
+
+[tasks."flatpak:run"]
+description = "Run the application from the flatpak build directory"
+run = "flatpak-builder --run build-dir packaging/flatpak/net.whiteblossom.Rowboat.yaml rowboat"

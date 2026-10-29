@@ -1,0 +1,64 @@
+name: Build & Publish Flatpak OCI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Mise & Tooling
+        run: |
+          curl -fsSL https://mise.run | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          mise install
+
+      - name: Install App Dependencies
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          mise run app:install
+
+      - name: Build Application
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          mise run app:build
+
+      - name: Package Linux Binary
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          mise run app:package-linux
+
+      - name: Install Flatpak Runtime & Builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder skopeo
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+
+      - name: Build Flatpak
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          mise run flatpak:build
+
+      - name: Export OCI Bundle
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          mise run flatpak:bundle-oci
+
+      - name: Publish to Forgejo Container Registry
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          TAG="${GITHUB_REF_NAME:-latest}"
+          [ "$TAG" = "main" ] && TAG="latest"
+          TAG="$TAG" mise run flatpak:push

@@ -1,0 +1,25 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: rowboat
+  description: AI coworker desktop app packaged as Flatpak and distributed as OCI container image
+  annotations:
+    gitea.whiteblossom.xyz/project-slug: whiteblossom/rowboat
+    github.com/project-slug: whiteblossom/rowboat
+    whiteblossom.net/packages: container:code-dev.whiteblossom.net/whiteblossom/rowboat
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - client-app
+    - electron
+    - flatpak
+    - oci
+    - ai
+spec:
+  type: client-app
+  artifacts:
+    - container-image
+    - flatpak
+    - binary
+  lifecycle: experimental
+  owner: platform-team
+  system: whiteblossom

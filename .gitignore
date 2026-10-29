@@ -12,3 +12,10 @@ data/
 .agents/
 .claude/skills/
 skills-lock.json
+
+# Flatpak and OCI build directories
+build-repo/
+build-dir/
+build-oci/
+.flatpak-builder/
+*.flatpak
