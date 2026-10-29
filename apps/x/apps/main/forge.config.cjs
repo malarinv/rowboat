@@ -351,8 +351,8 @@ module.exports = {
             name: '@electron-forge/publisher-github',
             config: {
                 repository: {
-                    owner: 'rowboatlabs',
-                    name: 'rowboat'
+                    owner: (process.env.GITHUB_REPOSITORY || 'malarinv/rowboat').split('/')[0],
+                    name: (process.env.GITHUB_REPOSITORY || 'malarinv/rowboat').split('/')[1] || 'rowboat'
                 },
                 prerelease: true
             }
