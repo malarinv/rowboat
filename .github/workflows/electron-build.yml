@@ -16,7 +16,7 @@ permissions:
 jobs:
   build-macos:
     runs-on: macos-latest
-    if: ${{ secrets.APPLE_CERTIFICATE != '' || github.repository == 'rowboatlabs/rowboat' }}
+    if: github.repository == 'rowboatlabs/rowboat'
 
     steps:
       - name: Checkout code
@@ -249,7 +249,7 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    if: ${{ secrets.AZURE_ENDPOINT != '' || github.repository == 'rowboatlabs/rowboat' }}
+    if: github.repository == 'rowboatlabs/rowboat'
 
     steps:
       - name: Checkout code
