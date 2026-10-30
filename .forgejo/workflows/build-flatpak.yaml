@@ -36,10 +36,10 @@ jobs:
           export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
           mise run app:package-linux
 
-      - name: Setup Flatpak & Skopeo
+      - name: Setup Flatpak, Skopeo & Xvfb
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder skopeo
+          sudo apt-get install -y flatpak flatpak-builder skopeo xvfb
           flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - name: Build Flatpak (Official Action)
