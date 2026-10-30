@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-flatpak:
-    runs-on: ubuntu-latest
+    runs-on: flatpak-builder
     steps:
       - name: Checkout Repository
         uses: https://github.com/actions/checkout@v4
@@ -36,20 +36,20 @@ jobs:
           export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
           mise run app:package-linux
 
-      - name: Install Flatpak Runtime & Builder
+      - name: Setup Flatpak & Skopeo
         run: |
-          sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:flatpak/stable
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder skopeo
           flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
 
-      - name: Build Flatpak
-        run: |
-          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
-          mise run flatpak:build
+      - name: Build Flatpak (Official Action)
+        uses: https://github.com/flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: Rowboat.flatpak
+          manifest-path: packaging/flatpak/net.whiteblossom.Rowboat.yaml
+          repo-dir: build-repo
+          run-tests: false
+          upload-artifact: false
 
       - name: Export OCI Bundle
         run: |
