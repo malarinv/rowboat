@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write  # Required to upload release assets
+  packages: write  # Required to push OCI container packages to GHCR
 
 jobs:
   build-macos:
@@ -238,6 +239,19 @@ jobs:
             gh release create "v${VERSION}" --title "v${VERSION}" --notes "Automated release build for v${VERSION}" --prerelease
           fi
           gh release upload "v${VERSION}" "apps/x/apps/main/out/make/Rowboat-${VERSION}-x64.flatpak" --clobber
+
+      - name: Build & Publish OCI Flatpak Package
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sudo apt-get install -y skopeo
+          rm -rf build-oci && mkdir -p build-oci
+          flatpak build-bundle --oci build-repo build-oci net.whiteblossom.Rowboat
+          echo "${GITHUB_TOKEN}" | skopeo login ghcr.io -u "${{ github.actor }}" --password-stdin
+          skopeo copy oci:build-oci:app/net.whiteblossom.Rowboat/x86_64/master "docker://ghcr.io/${{ github.repository }}:${VERSION}"
+          skopeo copy oci:build-oci:app/net.whiteblossom.Rowboat/x86_64/master "docker://ghcr.io/${{ github.repository }}:latest"
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v6

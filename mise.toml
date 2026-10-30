@@ -53,11 +53,23 @@ description = "Publish OCI bundle to Forgejo container registry"
 depends = ["flatpak:bundle-oci"]
 run = """
 TAG="${TAG:-latest}"
-REGISTRY="${REGISTRY:-code-dev.whiteblossom.net/whiteblossom/rowboat}"
+REGISTRY="${REGISTRY:-code.dev.whiteblossom.net/whiteblossom/rowboat}"
 skopeo copy \
+  --dest-tls-verify=false \
   --dest-creds "${REGISTRY_USERNAME}:${REGISTRY_TOKEN}" \
-  oci:build-oci \
+  oci:build-oci:app/net.whiteblossom.Rowboat/x86_64/master \
   "docker://${REGISTRY}:${TAG}"
+"""
+
+[tasks."flatpak:push-ghcr"]
+description = "Publish OCI bundle to GitHub Container Registry (ghcr.io)"
+depends = ["flatpak:bundle-oci"]
+run = """
+TAG="${TAG:-latest}"
+REPO="${GITHUB_REPOSITORY:-malarinv/rowboat}"
+skopeo copy \
+  oci:build-oci:app/net.whiteblossom.Rowboat/x86_64/master \
+  "docker://ghcr.io/${REPO}:${TAG}"
 """
 
 [tasks."flatpak:run"]
