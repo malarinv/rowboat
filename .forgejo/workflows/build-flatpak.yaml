@@ -50,6 +50,7 @@ jobs:
           repo-dir: build-repo
           run-tests: false
           upload-artifact: false
+          arch: ${{ runner.arch == 'ARM64' && 'aarch64' || 'x86_64' }}
 
       - name: Export OCI Bundle
         run: |

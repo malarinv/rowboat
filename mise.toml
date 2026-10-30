@@ -23,7 +23,7 @@ pnpm --filter rowboat run build
 [tasks."app:package-linux"]
 description = "Package Linux unpacked Electron directory"
 dir = "apps/x/apps/main"
-run = "npx electron-forge package --platform linux --arch x64"
+run = "npx electron-forge package --platform linux"
 
 [tasks."flatpak:build"]
 description = "Build Flatpak using flatpak-builder and export to local ostree repo"
@@ -54,10 +54,11 @@ depends = ["flatpak:bundle-oci"]
 run = """
 TAG="${TAG:-latest}"
 REGISTRY="${REGISTRY:-code.dev.whiteblossom.net/whiteblossom/rowboat}"
+ARCH="$(uname -m)"
 skopeo copy \
   --dest-tls-verify=false \
   --dest-creds "${REGISTRY_USERNAME}:${REGISTRY_TOKEN}" \
-  oci:build-oci:app/net.whiteblossom.Rowboat/x86_64/master \
+  "oci:build-oci:app/net.whiteblossom.Rowboat/${ARCH}/master" \
   "docker://${REGISTRY}:${TAG}"
 """
 
@@ -67,8 +68,9 @@ depends = ["flatpak:bundle-oci"]
 run = """
 TAG="${TAG:-latest}"
 REPO="${GITHUB_REPOSITORY:-malarinv/rowboat}"
+ARCH="$(uname -m)"
 skopeo copy \
-  oci:build-oci:app/net.whiteblossom.Rowboat/x86_64/master \
+  "oci:build-oci:app/net.whiteblossom.Rowboat/${ARCH}/master" \
   "docker://ghcr.io/${REPO}:${TAG}"
 """
 

@@ -30,7 +30,7 @@ modules:
     build-commands:
       # Install application files
       - install -d /app/lib/rowboat
-      - cp -r apps/x/apps/main/out/Rowboat-linux-x64/* /app/lib/rowboat/
+      - cp -r apps/x/apps/main/out/Rowboat-linux-*/* /app/lib/rowboat/
       
       # Install launcher
       - install -D -m 755 packaging/flatpak/rowboat-launcher.sh /app/bin/rowboat
