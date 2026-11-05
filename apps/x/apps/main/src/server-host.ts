@@ -235,6 +235,26 @@ async function launchChild(): Promise<ChildServer> {
     (app.isPackaged
       ? path.join(__dirname, 'rowboat-server.cjs')
       : path.resolve(app.getAppPath(), '../server/dist/standalone.js'));
+
+  const config = await loadServerConfig(WorkDir);
+
+  // If a previous instance crashed, a stale server.lock may remain in WorkDir.
+  // In containerized environments like Flatpak, PID recycling causes false-positive
+  // lock collisions if an unrelated container process reuses the old child's PID.
+  // When on Linux/containers, verify if a server is actually responding on the configured
+  // port; if not, clean up the stale lock. (macOS/Windows untouched).
+  const isContainerOrLinux = process.platform === 'linux' || Boolean(process.env.FLATPAK_ID);
+  if (isContainerOrLinux) {
+    const lockPath = path.join(WorkDir, 'server.lock');
+    if (!(await isRowboatServer(`http://127.0.0.1:${config.port}`))) {
+      try {
+        await fs.rm(lockPath, { force: true });
+      } catch {
+        // ignore ENOENT / race
+      }
+    }
+  }
+
   const child = spawn(process.execPath, [entry], {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ROWBOAT_PARENT_PID: String(process.pid) },
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -243,7 +263,6 @@ async function launchChild(): Promise<ChildServer> {
     console.error(`[server-host] child rowboat-server exited (code ${code})`);
   });
 
-  const config = await loadServerConfig(WorkDir);
   const deadline = Date.now() + 60_000;
   const port = config.port;
   for (;;) {

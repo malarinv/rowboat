@@ -149,6 +149,7 @@ app.on("open-url", (event, url) => {
 
 // Subsequent launches on Windows/Linux land here via the single-instance lock.
 app.on("second-instance", (_event, argv) => {
+  showApp();
   const url = extractDeepLinkFromArgv(argv);
   if (url) dispatchUrl(url);
 });
