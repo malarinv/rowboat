@@ -25,6 +25,7 @@ import {
 } from "./ipc.js";
 import { disposeAllTerminals } from "@x/core/dist/terminal/terminal.js";
 import { stopLocalAgents } from "@x/core/dist/spaces/local-agents.js";
+import { rangedResponse } from "@x/core/dist/spaces/byte-range.js";
 import * as spaceBlobCache from "./spaces/blob-cache.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname } from "node:path";
@@ -323,7 +324,8 @@ function registerAppProtocol() {
           // Not an image — fall through to the full blob.
         }
         const blob = await spaceBlobCache.getBlob(orgId, spaceId, hash);
-        return new Response(new Uint8Array(blob.bytes), { headers: { ...headers, "content-type": blob.mime } });
+        // Byte ranges, so a video in a message seeks (2026-11-04).
+        return rangedResponse(blob.bytes, request.headers.get("range"), { ...headers, "content-type": blob.mime });
       } catch (err) {
         console.error("[space-blob] failed to serve", request.url, err);
         return new Response("Not Found", { status: 404 });
@@ -434,8 +436,15 @@ function configureAppDisplayMediaHandler(targetSession: Session): void {
 // running from the tray. showApp() is the single "bring the app up" path
 // used by the tray, the Dock, and pending tray commands.
 let mainWindow: BrowserWindow | null = null;
+let isStartingUp = true;
+let pendingShowOnStartup = false;
 
 function showApp(): void {
+  if (isStartingUp) {
+    pendingShowOnStartup = true;
+    app.focus({ steal: true });
+    return;
+  }
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     if (!mainWindow.isVisible()) mainWindow.maximize();
@@ -472,6 +481,16 @@ function wasLaunchedAtLogin(): boolean {
 }
 
 function createWindow(options: { startHidden?: boolean } = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!options.startHidden) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.maximize();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    return mainWindow;
+  }
+
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -514,6 +533,10 @@ function createWindow(options: { startHidden?: boolean } = {}) {
     if (options.startHidden) return;
     win.maximize();
     win.show();
+    if (pendingShowOnStartup) {
+      win.focus();
+      app.focus({ steal: true });
+    }
   });
 
   // A link into a signed-in org (the contract's link grammar: a space, a
@@ -731,7 +754,8 @@ app.whenReady().then(async () => {
     toggleMeetingNotes: toggleMeetingNotesFromMenus,
   });
 
-  createWindow({ startHidden: wasLaunchedAtLogin() });
+  createWindow({ startHidden: pendingShowOnStartup ? false : wasLaunchedAtLogin() });
+  isStartingUp = false;
 
   // Menu bar icon: open the app / start-stop meeting notes without the window.
   createAppTray({
